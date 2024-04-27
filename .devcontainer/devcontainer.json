@@ -1,0 +1,26 @@
+{
+    "name": "behavior-parse",
+    "dockerComposeFile": "docker-compose.yaml",
+    "service": "behavior-parse",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "features": {
+      "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+      "ghcr.io/devcontainers/features/node:1": {},
+      "ghcr.io/devcontainers/features/powershell:1": {},
+      "ghcr.io/devcontainers/features/java:1": {}
+    },
+    "postCreateCommand": "bash .devcontainer/postCreate.sh",
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "ms-vscode-remote.remote-containers",
+          "esbenp.prettier-vscode",
+          "github.copilot",
+          "github.copilot-chat",
+        ]
+        }
+      }
+
+    }
+  
+  

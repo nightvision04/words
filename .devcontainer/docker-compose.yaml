@@ -1,0 +1,22 @@
+version: "3"
+
+name: behavior-parse
+
+networks:
+  behavior:
+    name: behavior
+    driver: bridge
+
+services:
+  behavior-parse:
+    build: 
+      context: .
+      dockerfile:  Dockerfile
+    
+    volumes:
+      - ../..:/workspaces:cached
+
+    command: sleep infinity
+
+    networks:
+      - behavior
