@@ -9,6 +9,7 @@ export default function Home() {
     const [prompt, setPrompt] = useState('Tom Cook');
     const [response, setResponse] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
   
 // Inside your React component (assuming you're in /pages/page.tsx)
 
