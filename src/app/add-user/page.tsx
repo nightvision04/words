@@ -7,7 +7,7 @@ export default function AddUser() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
 
   const fetchUser = async () => {
-    const response = await fetch('${baseUrl}//api/add-user', {
+    const response = await fetch(`${baseUrl}/api/add-user`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
