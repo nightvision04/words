@@ -1,11 +1,14 @@
 'use client';
-import React from 'react';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/router';
 
 export default function AddUser() {
   const router = useRouter();
+
   useEffect(() => {
+    // Only run the effect if the router is ready
+    if (!router.isReady) return;
+
     const fetchUser = async () => {
       const response = await fetch('/api/add-user', {
         method: 'POST',
@@ -23,7 +26,7 @@ export default function AddUser() {
     };
 
     fetchUser();
-  }, []);
+  }, [router]); // 
 
   return (
     <div>
