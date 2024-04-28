@@ -6,8 +6,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Behavior Coordinates",
-  description: "Generate behavior coordinates from event logs",
+  title: "Scra-ABLE",
+  description: "A better scrabble game",
 };
 
 export default function RootLayout({
