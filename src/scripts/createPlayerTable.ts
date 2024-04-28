@@ -1,4 +1,4 @@
-import db from '../lib/knex';
+import db from '../lib/db.ts';
 
 const createPlayersTable = async (): Promise<void> => {
   if (!await db.schema.hasTable('Players')) {
