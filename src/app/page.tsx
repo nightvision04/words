@@ -2,6 +2,7 @@
 'use client';
 import React from 'react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import "./globals.css";
 
 export default function Home() {
@@ -49,6 +50,9 @@ const handleSubmit = async (e: React.FormEvent) => {
             localStorage.setItem('PlayerId', idResult.playerId.toString());  // Store the player ID in local storage
             console.log(idResult.playerId.toString());
             setResponse('User has been updated and ID retrieved.');
+
+            router.push(`${baseUrl}/lobby`);
+
         } else {
             throw new Error(idResult.message);
         }
