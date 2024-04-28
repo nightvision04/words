@@ -12,7 +12,8 @@ interface ApiResponse {
 
 export async function POST(req: Request) {
   try {
-    const { name } = await req.json();
+    // const { name } = await req.json();
+    const name  = 'Youu';
     const token = uuidv4();
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 1); // Set expiry to 24 hours later
