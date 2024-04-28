@@ -3,9 +3,9 @@ import setupDatabase from '../../../lib/db';
 
 export async function POST(req: Request) {
     const db = await setupDatabase();
-    const { senderId, receiverName } = await req.json();
+    const { senderId, receiverId } = await req.json();
     try {
-        const receiver = await db.get(`SELECT Id FROM Players WHERE Name = ?`, [receiverName]);
+        const receiver = await db.get(`SELECT Id FROM Players WHERE Id = ?`, [receiverId]);
         if (!receiver) {
             return new NextResponse(JSON.stringify({ success: false, message: 'Receiver not found' }), { status: 404 });
         }

@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import setupDatabase from '../../../lib/db';
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
     const db = await setupDatabase();
-    const url = new URL(req.url); // Convert req.url to a URL object
-    const receiverId = url.searchParams.get('receiverId'); // Use searchParams to get the query parameter
+    const { playerId } = await req.json();
 
     try {
-        const invitation = await db.get(`SELECT * FROM Invitations WHERE ReceiverId = ? AND Status = 'pending'`, [receiverId]);
+        const invitation = await db.get(`SELECT * FROM Invitations WHERE ReceiverId = ? AND Status = 'pending'`, [playerId]);
         if (invitation) {
             return new NextResponse(JSON.stringify({ success: true, invitation }), { status: 200 });
         } else {

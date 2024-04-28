@@ -9,38 +9,62 @@ export default function Home() {
     const [response, setResponse] = useState('');
     const [isLoading, setIsLoading] = useState(false);
   
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setIsLoading(true);
-      setResponse(''); // Clear previous response
+// Inside your React component (assuming you're in /pages/page.tsx)
 
-      // Retrieve session token if it exists
-      const sessionToken = localStorage.getItem('sessionToken');
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setResponse(''); // Clear previous response
 
-      try {
-          const res = await fetch(`${baseUrl}/api/add-user`, {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ name: prompt, token: sessionToken }),
-          });
+  const token = localStorage.getItem('token');
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
 
-          const data = await res.json();
-          if (data.success) {
-              setIsLoading(false);
-              setResponse('User has been added/updated.');
-              // Update session token in local storage
-              localStorage.setItem('sessionToken', data.token);
-          } else {
-              throw new Error(data.message);
-          }
-      } catch (error) {
-          setResponse('Failed to fetch response: ');
-          setIsLoading(false);
-      }
-  };
+  try {
+      // First, update or add user with token
+      const addUserResponse = await fetch(`${baseUrl}/api/add-user`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: prompt, token: token }),
+      });
+
+      const addUserResult = await addUserResponse.json();
+      if (addUserResult.success) {
+        localStorage.setItem('Token', addUserResult.token.toString());  // Store the token in local storage
+        console.log(addUserResult.token.toString());
+        setResponse('User has been added and token retrieved.');
+
+        // If user update/add is successful, fetch the player's ID using the token
+        const idResponse = await fetch(`${baseUrl}/api/get-id-from-token`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token: addUserResult.token.toString() }),
+      });
+      
+        const idResult = await idResponse.json();
+        if (idResult.success) {
+            localStorage.setItem('PlayerId', idResult.playerId.toString());  // Store the player ID in local storage
+            console.log(idResult.playerId.toString());
+            setResponse('User has been updated and ID retrieved.');
+        } else {
+            throw new Error(idResult.message);
+        }
+
+    } else {
+        throw new Error(addUserResult.message);
+    }
+
+  } catch (error) {
+      setResponse(`Failed to fetch response`);
+  } finally {
+      setIsLoading(false);
+  }
+};
+
+
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setPrompt(e.target.value);
@@ -54,14 +78,11 @@ export default function Home() {
   };
 
 
-
-  
 return (
 <>
 <div className="bg-white">
   <header className="absolute inset-x-0 top-0 z-50">
     <nav className="flex items-center justify-between p-6 lg:px-8" aria-label="Global">
-
 
     </nav>
     

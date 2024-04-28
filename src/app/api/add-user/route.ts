@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
         const response = {
           success: true,
-          token: sessionToken
+          token: sessionToken,
         };
 
         return new NextResponse(JSON.stringify(response), {

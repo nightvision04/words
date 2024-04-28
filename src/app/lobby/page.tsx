@@ -18,6 +18,7 @@ interface Player {
 interface Invitation {
   Id: number;
   SenderId: number;
+  ReceiverId: number;
   Status: string;
   DateCreated: string;
 }
@@ -28,6 +29,25 @@ export default function Lobby() {
   const [error, setError] = useState('');
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+
+  const sendInvite = async (receiverId: number) => {
+    const senderId = 1; // Assuming current user's ID is known or retrieved from context/session. Should lookup own ID here, based on token or session.
+    try {
+      const response = await fetch(`${baseUrl}/api/send-invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ senderId, receiverId }),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        setError(data.message || 'Failed to send invite');
+      }
+    } catch (error) {
+      setError('Error sending invite');
+    }
+  };
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -57,27 +77,25 @@ export default function Lobby() {
     const checkForInvitations = async () => {
       const interval = setInterval(async () => {
         // Assume retrieval of receiverId somehow (context, local storage, etc.)
-        const receiverId = 1; // Placeholder for the actual receiverId retrieval
+        const PlayerId = localStorage.getItem('PlayerId');
         const response = await fetch(`${baseUrl}/api/check-for-invite`, {
-          method: 'GET',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          // This part is modified as GET requests shouldn't include a body
-          // Passing parameters should be through the URL or derived from session
+          body: JSON.stringify({ playerId: PlayerId }),
         });
-
+    
         const data = await response.json();
-
+    
         if (data.success) {
-          if (data.success) {
-            setInvitation(data.invitation);
-          }
+          setInvitation(data.invitation);
         }
       }, 1000);
-
+    
       return () => clearInterval(interval);
     };
+    
 
     fetchUsers();
     checkForInvitations();
@@ -98,7 +116,12 @@ export default function Lobby() {
       {players.length > 0 ? (
         <ul>
           {players.map(player => (
-            <li key={player.Id}>{player.Name}</li>
+            <li key={player.Id}>
+            {player.Name}
+            <button 
+            className="max-w-2xl rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" 
+            onClick={() => sendInvite(player.Id)}>Send Invite</button>
+          </li>
           ))}
         </ul>
       ) : (
