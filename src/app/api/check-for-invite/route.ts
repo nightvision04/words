@@ -11,7 +11,7 @@ export async function GET(req: Request) {
         if (invitation) {
             return new NextResponse(JSON.stringify({ success: true, invitation }), { status: 200 });
         } else {
-            return new NextResponse(JSON.stringify({ success: false, message: 'No invitations found' }), { status: 404 });
+            return new NextResponse(JSON.stringify({ success: false, message: 'No invitations found' }), { status: 200 });
         }
     } catch (error) {
         return new NextResponse(JSON.stringify({ success: false, message: 'Database error', error }), { status: 500 });
