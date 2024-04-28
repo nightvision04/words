@@ -27,6 +27,32 @@ const createPlayersTable = async () => {
   await db.close();
 };
 
+
 createPlayersTable().catch(err => {
+  console.error('Error creating table:', err);
+});
+
+const createInvitationsTable = async () => {
+  const db = await open({
+    filename: 'mydatabase.db',
+    driver: sqlite3.Database
+  });
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS Invitations (
+      Id INTEGER PRIMARY KEY AUTOINCREMENT,
+      SenderId INTEGER,
+      ReceiverId INTEGER,
+      Status TEXT DEFAULT 'pending',  -- could be 'pending', 'accepted', 'rejected'
+      DateCreated TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (SenderId) REFERENCES Players(Id),
+      FOREIGN KEY (ReceiverId) REFERENCES Players(Id)
+    )
+  `);
+
+  console.log('Invitations table created');
+  await db.close();
+};
+
+createInvitationsTable().catch(err => {
   console.error('Error creating table:', err);
 });

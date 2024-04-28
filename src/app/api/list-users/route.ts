@@ -12,6 +12,7 @@ export async function GET(req: Request) {
   try {
     const db = await setupDatabase();
     const players = await db.all('SELECT * FROM Players');
+    console.log('Players:', players);
 
     const response: ApiResponse = {
       success: true,
