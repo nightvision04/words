@@ -1,12 +1,16 @@
-import setupDatabase from '../lib/db';
+const { open } = require('sqlite');
+const sqlite3 = require('sqlite3');
 
-const createPlayersTable = async (): Promise<void> => {
-  const db = await setupDatabase();
+const createPlayersTable = async () => {
+  const db = await open({
+    filename: 'mydatabase.db',
+    driver: sqlite3.Database
+  });
   await db.exec(`
     CREATE TABLE IF NOT EXISTS Players (
       Id INTEGER PRIMARY KEY AUTOINCREMENT,
       DateCreated TEXT DEFAULT (datetime('now')),
-      Name TEXT NOT NOT NULL UNIQUE,
+      Name TEXT NOT NULL UNIQUE,
       LastLogin TEXT DEFAULT (datetime('now')),
       OverallScore INTEGER DEFAULT 0,
       Wins INTEGER DEFAULT 0,

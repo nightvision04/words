@@ -17,6 +17,8 @@
           "esbenp.prettier-vscode",
           "github.copilot",
           "github.copilot-chat",
+          "alexcvzz.vscode-sqlite",
+
         ]
         }
       }

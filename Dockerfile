@@ -25,9 +25,7 @@ ENV NODE_ENV production
 # Create a group and user for running the application
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
-
 RUN apt-get update && apt-get install -y curl
-
 # Prepare directory structures and permissions
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
@@ -35,8 +33,15 @@ COPY --from=builder /app/next.config.mjs ./
 COPY --from=builder /app/postcss.config.mjs ./
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
-RUN mkdir /app/tmp && chown nextjs:nodejs /app/tmp
+COPY --from=builder /app/src ./src
+
+# Install ts-node in the runner stage
+RUN npm install ts-node
+
+# Run the createPlayerTable script as the nextjs user
 USER nextjs
+RUN npx ts-node ./src/scripts/createTables.ts
+
 EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
@@ -44,4 +49,3 @@ ENV HOSTNAME "0.0.0.0"
 HEALTHCHECK CMD curl --fail http://localhost:3000 || exit 1
 # Start the Next.js application using Next.js's built-in server
 CMD ["./node_modules/.bin/next", "start"]
-
