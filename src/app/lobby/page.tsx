@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface Player {
   Id: number;
@@ -28,6 +29,7 @@ export default function Lobby() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [invitation, setInvitation] = useState<Invitation | null>(null);
+  const router = useRouter();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
 
   const sendInvite = async (receiverId: number) => {
@@ -43,6 +45,8 @@ export default function Lobby() {
       const data = await response.json();
       if (!data.success) {
         setError(data.message || 'Failed to send invite');
+      }else{
+        router.push(`${baseUrl}/game`);
       }
     } catch (error) {
       setError('Error sending invite');
