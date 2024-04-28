@@ -13,54 +13,46 @@ export default function Home() {
       e.preventDefault();
       setIsLoading(true);
       setResponse(''); // Clear previous response
-      try {
-        const res = await fetch('/api/play-game', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ prompt }),
-        });
-  
-        if (res.ok && res.body) {
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder('utf-8');
-          let content = '';
-  
-          const processText = async ({ done, value }: ReadableStreamReadResult<Uint8Array>): Promise<void> => {
-            if (done) {
-              setIsLoading(false);
-              return;
-            }
-            const chunk = decoder.decode(value, { stream: true });
-            content += chunk;
-            setResponse(content);
-            return reader.read().then(processText);
-          };
-  
-          reader.read().then(processText);
-        } else {
-          throw new Error('Network response was not ok.');
-        }
-      } catch (error) {
-        setResponse('Failed to fetch response.');
-        setIsLoading(false);
-      }
-    };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          handleSubmit(e as unknown as React.FormEvent); // cast to the correct event type
+      // Retrieve session token if it exists
+      const sessionToken = localStorage.getItem('sessionToken');
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+
+      try {
+          const res = await fetch(`${baseUrl}/api/add-user`, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ name: prompt, token: sessionToken }),
+          });
+
+          const data = await res.json();
+          if (data.success) {
+              setIsLoading(false);
+              setResponse('User has been added/updated.');
+              // Update session token in local storage
+              localStorage.setItem('sessionToken', data.token);
+          } else {
+              throw new Error(data.message);
+          }
+      } catch (error) {
+          setResponse('Failed to fetch response: ');
+          setIsLoading(false);
       }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setPrompt(e.target.value);
-      // Adjust height automatically, you may need to refine this for your specific use case
-      e.target.style.height = 'inherit';
-      e.target.style.height = `${e.target.scrollHeight}px`;
   };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSubmit(e as unknown as React.FormEvent);
+      }
+  };
+
 
 
   
@@ -101,6 +93,7 @@ return (
         type="submit"
         className={`max-w-2xl rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
         disabled={isLoading}
+        onClick={(e) => handleSubmit(e)}
         >
         {isLoading ? 'Loading...' : 'Play'}
         </button>

@@ -17,7 +17,9 @@ const createPlayersTable = async () => {
       Losses INTEGER DEFAULT 0,
       GameCount INTEGER DEFAULT 0,
       LastModified TEXT DEFAULT (datetime('now')),
-      CurrentGame INTEGER
+      CurrentGame INTEGER,
+      Token TEXT,
+      TokenExpiry TEXT
     )
   `);
 
