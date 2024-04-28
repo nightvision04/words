@@ -40,7 +40,7 @@ RUN npm install ts-node
 
 # Run the createPlayerTable script as the nextjs user
 USER nextjs
-RUN npx ts-node ./src/scripts/createTables.ts
+RUN npx ts-node ./src/scripts/createTables.js
 
 EXPOSE 3000
 ENV PORT 3000
