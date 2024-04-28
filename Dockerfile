@@ -41,12 +41,16 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/src ./src
 
+# Ensure directory for SQLite database exists and is accessible
+RUN mkdir -p /app && chown -R nextjs:nodejs /app
+
 # Install ts-node in the runner stage
 RUN npm install ts-node
 
-# Set the user to nextjs
+# Switch to nextjs user before running scripts
 USER nextjs
-# Run the createPlayerTable script
+
+# Run the createPlayersTable script
 RUN npx ts-node ./src/scripts/createTables.js
 
 # Expose the port Next.js will run on
