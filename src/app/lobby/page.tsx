@@ -117,7 +117,7 @@ export default function Lobby() {
     
         const data = await response.json();
     
-        if (data.success) {
+        if (data.success && data.valid) {
           setInvitation(data.invitation);
         }
       }, 1000);

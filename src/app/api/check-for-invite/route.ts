@@ -8,11 +8,11 @@ export async function POST(req: Request) {
     try {
         const invitation = await db.get(`SELECT i.* FROM Invitations i JOIN Players p ON p.Id = i.SenderId WHERE ReceiverId = ? AND Status = 'pending'`, [playerId]);
         if (invitation) {
-            return new NextResponse(JSON.stringify({ success: true, invitation }), { status: 200 });
+            return new NextResponse(JSON.stringify({ success: true, valid: true, invitation }), { status: 200 });
         } else {
-            return new NextResponse(JSON.stringify({ success: false, message: 'No invitations found' }), { status: 200 });
+            return new NextResponse(JSON.stringify({ success: false, valid: false, message: 'No invitations found' }), { status: 200 });
         }
     } catch (error) {
-        return new NextResponse(JSON.stringify({ success: false, message: 'Database error', error }), { status: 500 });
+        return new NextResponse(JSON.stringify({ success: false, valid: false, message: 'Database error', error }), { status: 500 });
     }
 }
