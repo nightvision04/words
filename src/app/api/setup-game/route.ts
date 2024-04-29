@@ -22,23 +22,28 @@ export async function POST(req: Request) {
 
     try {
         const invitation = await db.get(`SELECT * FROM Invitations WHERE ReceiverId = ? AND Status = 'accepted'`, [receiverId]);
+        await db.close();
         if (!invitation) {
             return new NextResponse(JSON.stringify({ success: false, message: 'No valid invitations found' }), { status: 404 });
         }
 
         // Check if game already exists
-        const existingGame = await db.get(`SELECT * FROM Games WHERE CreatorId = ? OR JoinerId = ?`, [senderId, receiverId]);
+        const db2 = await setupDatabase();
+        const existingGame = await db2.get(`SELECT * FROM Games WHERE CreatorId = ? OR JoinerId = ?`, [senderId, receiverId]);
+        await db2.close();
         if (existingGame) {
             return new NextResponse(JSON.stringify({ success: false, message: 'Game already set up' }), { status: 409 });
         }
 
         // Create a new game entry
         const tiles = distributeTiles(scrabblePieces); // This should handle drawing and point balancing
-        const result = await db.run(`
+        const db3 = await setupDatabase();
+        const result = await db3.run(`
             INSERT INTO Games (CreatorId, JoinerId, Board, CreatorPieces, JoinerPieces, DateCreated)
             VALUES (?, ?, ?, ?, ?, datetime('now'))`,
             [senderId, receiverId, JSON.stringify({}), JSON.stringify(tiles.creator), JSON.stringify(tiles.joiner)]
         );
+        await db3.close();
 
         return new NextResponse(JSON.stringify({ success: true, gameId: result.lastID }), { status: 201 });
     } catch (error) {

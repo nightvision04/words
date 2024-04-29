@@ -43,6 +43,7 @@ export async function POST(req: Request) {
           token: sessionToken,
         };
 
+        await db.close();
         return new NextResponse(JSON.stringify(response), {
           status: 200,
           headers: {

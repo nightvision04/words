@@ -82,6 +82,8 @@ export default function Lobby() {
 
     setPlayerId(Number(localStorage.getItem('PlayerId')))
 
+    let fetchInterval;
+
     const fetchUsers = async () => {
       try {
         const response = await fetch(`${baseUrl}/api/list-users`, {
@@ -101,14 +103,16 @@ export default function Lobby() {
       } catch (error) {
         console.error('Error fetching users:', error);
         setError('An error occurred while fetching users');
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
+
+    fetchUsers(); // Initial fetch when component mounts
+    fetchInterval = setInterval(fetchUsers, 10000); // Fetch users every 10 seconds
 
     const checkForInvitations = async () => {
       const interval = setInterval(async () => {
-        // Assume retrieval of receiverId somehow (context, local storage, etc.)
         const PlayerId = Number(localStorage.getItem('PlayerId'));
         const response = await fetch(`${baseUrl}/api/check-for-invite`, {
           method: 'POST',
@@ -127,11 +131,13 @@ export default function Lobby() {
     
       return () => clearInterval(interval);
     };
-    
 
-    fetchUsers();
     checkForInvitations();
-  }, [baseUrl]); // Adding an empty dependency array to ensure the effect runs only once after the component mounts.
+
+    return () => {
+      clearInterval(fetchInterval); // Clear interval when component unmounts
+    };
+  }, [baseUrl]); // Dependencies array to avoid creating intervals multiple times
 
   if (loading) {
     return <div>Loading...</div>;

@@ -7,6 +7,7 @@ export async function POST(req: Request) {
 
     try {
         const player = await db.get(`SELECT Id FROM Players WHERE Token = ?`, [token]);
+        await db.close();
         if (player) {
             return new NextResponse(JSON.stringify({ success: true, playerId: player.Id }), { status: 200 });
         } else {

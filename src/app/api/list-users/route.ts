@@ -12,11 +12,18 @@ export async function GET(req: Request) {
   try {
     const db = await setupDatabase();
     const players = await db.all('SELECT * FROM Players');
+    const simplifiedPlayers = players.map(player => ({
+      Id: player.Id,
+      Name: player.Name,
+      LastLogin: player.LastLogin,
+      // other fields as necessary
+    }));
+    await db.close();
     console.log('Players:', players);
 
     const response: ApiResponse = {
       success: true,
-      players,
+      players: simplifiedPlayers,
     };
 
     return new NextResponse(JSON.stringify(response), {
