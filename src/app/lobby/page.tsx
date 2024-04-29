@@ -18,6 +18,7 @@ interface Player {
 
 interface Invitation {
   Id: number;
+  Name: string;
   SenderId: number;
   ReceiverId: number;
   Status: string;
@@ -137,7 +138,7 @@ export default function Lobby() {
       )}
       <p>{invitation && (
         <div>
-          <p>You have an invitation from Player ID: {invitation.SenderId}</p>
+          <p>You have an invitation from Player: {invitation.Name}</p>
           <button
             className="ml-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
             onClick={() => goToGame(invitation.SenderId)}>Go to Game
