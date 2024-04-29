@@ -18,8 +18,7 @@ export async function POST(req: Request) {
     ];
 
     const db = await setupDatabase();
-    const { senderId } = await req.json();
-    const { receiverId } = await req.json();
+    const { senderId, receiverId } = await req.json();
 
     try {
         const invitation = await db.get(`SELECT * FROM Invitations WHERE ReceiverId = ? AND Status = 'accepted'`, [receiverId]);
