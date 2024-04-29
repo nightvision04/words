@@ -6,7 +6,7 @@ export async function POST(req: Request) {
     const { playerId } = await req.json();
 
     try {
-        const invitation = await db.get(`SELECT i.* FROM Invitations i JOIN Players p ON p.Id = i.SenderId WHERE ReceiverId = ? AND Status = 'pending'`, [playerId]);
+        const invitation = await db.get(`SELECT i.*, p.Name FROM Invitations i JOIN Players p ON p.Id = i.SenderId WHERE ReceiverId = ? AND Status = 'pending'`, [playerId]);
         if (invitation) {
             return new NextResponse(JSON.stringify({ success: true, valid: true, invitation }), { status: 200 });
         } else {
