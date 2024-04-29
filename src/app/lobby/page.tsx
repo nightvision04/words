@@ -32,6 +32,10 @@ export default function Lobby() {
   const router = useRouter();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
 
+  const goToGame = (creatorId: number) => {
+    router.push('/game');
+  };
+
   const sendInvite = async (receiverId: number) => {
     const senderId = 1; // Assuming current user's ID is known or retrieved from context/session. Should lookup own ID here, based on token or session.
     try {
@@ -134,6 +138,10 @@ export default function Lobby() {
       <p>{invitation && (
         <div>
           <p>You have an invitation from Player ID: {invitation.SenderId}</p>
+          <button
+            className="ml-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+            onClick={() => goToGame(invitation.SenderId)}>Go to Game
+          </button>
         </div>
       )}</p>
     </div>
