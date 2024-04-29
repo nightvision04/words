@@ -32,6 +32,7 @@ export default function Lobby() {
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const router = useRouter();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+  const PlayerId = Number(localStorage.getItem('PlayerId'));
 
   const goToGame = async (senderId: number, receiverId: number) => {
     try {
@@ -57,8 +58,7 @@ export default function Lobby() {
     }
   };
 
-  const sendInvite = async (receiverId: number) => {
-    const senderId = 1; // Assuming current user's ID is known or retrieved from context/session. Should lookup own ID here, based on token or session.
+  const sendInvite = async (senderId: number | null, receiverId: number) => {
     try {
       const response = await fetch(`${baseUrl}/api/send-invite`, {
         method: 'POST',
@@ -149,7 +149,7 @@ export default function Lobby() {
             {player.Name}
             <button 
             className="max-w-2xl rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" 
-            onClick={() => sendInvite(player.Id)}>Send Invite</button>
+            onClick={() => sendInvite(PlayerId, player.Id)}>Send Invite</button>
           </li>
           ))}
         </ul>
@@ -158,7 +158,7 @@ export default function Lobby() {
       )}
       <p>{invitation && (
         <div>
-          <p>You have an invitation from Player: {invitation.Name}</p>
+          <p>You have an invitation from Player: {invitation.Name} </p>
           <button
             className="ml-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
             onClick={() => goToGame(invitation.SenderId, invitation.ReceiverId)}>Go to Game
