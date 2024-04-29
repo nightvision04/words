@@ -79,11 +79,11 @@ export default function Lobby() {
   };
 
   useEffect(() => {
-
-    setPlayerId(Number(localStorage.getItem('PlayerId')))
-
-    let fetchInterval;
-
+    // Set the player ID from localStorage
+    const storedPlayerId = Number(localStorage.getItem('PlayerId'));
+    setPlayerId(storedPlayerId);
+  
+    // Fetch users from the API and set them to state
     const fetchUsers = async () => {
       try {
         const response = await fetch(`${baseUrl}/api/list-users`, {
@@ -92,9 +92,7 @@ export default function Lobby() {
             'Content-Type': 'application/json',
           },
         });
-
         const data = await response.json();
-
         if (data.success) {
           setPlayers(data.players);
         } else {
@@ -107,38 +105,38 @@ export default function Lobby() {
         setLoading(false);
       }
     };
-
-    fetchUsers(); // Initial fetch when component mounts
-    fetchInterval = setInterval(fetchUsers, 10000); // Fetch users every 10 seconds
-
+  
+    fetchUsers();
+    const fetchInterval = setInterval(fetchUsers, 10000);  // Refresh user list every 10 seconds
+  
+    // Check for invitations regularly
     const checkForInvitations = async () => {
       const interval = setInterval(async () => {
-        const PlayerId = Number(localStorage.getItem('PlayerId'));
         const response = await fetch(`${baseUrl}/api/check-for-invite`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ playerId: PlayerId }),
+          body: JSON.stringify({ playerId: storedPlayerId }),
         });
-    
+  
         const data = await response.json();
-    
         if (data.success && data.valid) {
           setInvitation(data.invitation);
         }
-      }, 1000);
-    
-      return () => clearInterval(interval);
+      }, 1000);  // Check every second
+  
+      return () => clearInterval(interval);  // Clean up the interval on component unmount or dependency change
     };
-
+  
     checkForInvitations();
-
+  
     return () => {
-      clearInterval(fetchInterval); // Clear interval when component unmounts
+      clearInterval(fetchInterval);  // Clean up the user fetch interval
     };
-  }, [baseUrl]); // Dependencies array to avoid creating intervals multiple times
+  }, [baseUrl]);  // Run the effect whenever baseUrl changes
 
+  
   if (loading) {
     return <div>Loading...</div>;
   }

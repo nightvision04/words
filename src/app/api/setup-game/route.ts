@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     const { senderId, receiverId } = await req.json();
 
     try {
-        const invitation = await db.get(`SELECT * FROM Invitations WHERE ReceiverId = ? AND Status = 'accepted'`, [receiverId]);
+        const invitation = await db.get(`SELECT * FROM Invitations WHERE SenderId = ? AND ReceiverId = ? AND Status = 'pending'`, [senderId, receiverId]);
         await db.close();
         if (!invitation) {
             return new NextResponse(JSON.stringify({ success: false, message: 'No valid invitations found' }), { status: 404 });
@@ -42,6 +42,7 @@ export async function POST(req: Request) {
             INSERT INTO Games (CreatorId, JoinerId, Board, CreatorPieces, JoinerPieces, DateCreated)
             VALUES (?, ?, ?, ?, ?, datetime('now'))`,
             [senderId, receiverId, JSON.stringify({}), JSON.stringify(tiles.creator), JSON.stringify(tiles.joiner)]
+
         );
         await db3.close();
 
