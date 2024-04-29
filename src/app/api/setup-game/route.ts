@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import setupDatabase from '../../../lib/db';
+import { distributeTiles } from '../../../scripts/distributeTiles.js';
 
 export async function POST(req: Request) {
 
@@ -15,44 +16,6 @@ export async function POST(req: Request) {
         { letter: 'V', count: 2, points: 4 }, { letter: 'W', count: 2, points: 4 }, { letter: 'X', count: 1, points: 8 },
         { letter: 'Y', count: 2, points: 4 }, { letter: 'Z', count: 1, points: 10 }, { letter: 'BLANK', count: 2, points: 0 }
     ];
-
-    /**
-     * Shuffles an array using Fisher-Yates (Knuth) shuffle algorithm.
-     */
-    function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    }
-
-    /**
-     * Distributes Scrabble tiles to two players while attempting to balance the score.
-     */
-    function distributeTiles(scrabblePieces) {
-        // Flatten the piece distribution according to count and shuffle them
-        let allTiles = [];
-        scrabblePieces.forEach(piece => {
-            for (let i = 0; i < piece.count; i++) {
-                allTiles.push({ letter: piece.letter, points: piece.points });
-            }
-        });
-        allTiles = shuffleArray(allTiles);
-
-        // Allocate tiles to players
-        const midPoint = Math.floor(allTiles.length / 2);
-        let playerOneTiles = allTiles.slice(0, midPoint);
-        let playerTwoTiles = allTiles.slice(midPoint);
-
-        // Optionally, you might want to implement additional logic to balance the points
-        // This example assumes a simple split which might not perfectly balance the points
-
-        return {
-            creator: playerOneTiles,
-            joiner: playerTwoTiles
-        };
-    }
 
     const db = await setupDatabase();
     const { playerId } = await req.json();
