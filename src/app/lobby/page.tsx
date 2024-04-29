@@ -32,7 +32,7 @@ export default function Lobby() {
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const router = useRouter();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-  const PlayerId = Number(localStorage.getItem('PlayerId'));
+  const [PlayerId, setPlayerId] = useState<number | null>(null);
 
   const goToGame = async (senderId: number, receiverId: number) => {
     try {
@@ -79,6 +79,9 @@ export default function Lobby() {
   };
 
   useEffect(() => {
+
+    setPlayerId(Number(localStorage.getItem('PlayerId')))
+
     const fetchUsers = async () => {
       try {
         const response = await fetch(`${baseUrl}/api/list-users`, {
@@ -106,7 +109,7 @@ export default function Lobby() {
     const checkForInvitations = async () => {
       const interval = setInterval(async () => {
         // Assume retrieval of receiverId somehow (context, local storage, etc.)
-        const PlayerId = localStorage.getItem('PlayerId');
+        const PlayerId = Number(localStorage.getItem('PlayerId'));
         const response = await fetch(`${baseUrl}/api/check-for-invite`, {
           method: 'POST',
           headers: {
