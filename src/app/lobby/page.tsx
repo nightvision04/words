@@ -33,8 +33,28 @@ export default function Lobby() {
   const router = useRouter();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
 
-  const goToGame = (creatorId: number) => {
-    router.push('/game');
+  const goToGame = async (senderId: number, receiverId: number) => {
+    try {
+      const response = await fetch(`${baseUrl}/api/send-invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ senderId, receiverId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to send invite');
+        return;
+      }
+
+      // Navigate to game page if the invite is successfully sent
+      router.push('/game');  // Removed 'baseUrl' from the path, assuming '/game' is correct
+    } catch (error) {
+      setError('Network error occurred');
+      console.error('Failed to send invite:', error);
+    }
   };
 
   const sendInvite = async (receiverId: number) => {
@@ -141,7 +161,7 @@ export default function Lobby() {
           <p>You have an invitation from Player: {invitation.Name}</p>
           <button
             className="ml-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-            onClick={() => goToGame(invitation.SenderId)}>Go to Game
+            onClick={() => goToGame(invitation.SenderId, invitation.ReceiverId)}>Go to Game
           </button>
         </div>
       )}</p>

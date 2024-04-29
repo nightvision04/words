@@ -18,16 +18,17 @@ export async function POST(req: Request) {
     ];
 
     const db = await setupDatabase();
-    const { playerId } = await req.json();
+    const { senderId } = await req.json();
+    const { receiverId } = await req.json();
 
     try {
-        const invitation = await db.get(`SELECT * FROM Invitations WHERE ReceiverId = ? AND Status = 'accepted'`, [playerId]);
+        const invitation = await db.get(`SELECT * FROM Invitations WHERE ReceiverId = ? AND Status = 'accepted'`, [receiverId]);
         if (!invitation) {
             return new NextResponse(JSON.stringify({ success: false, message: 'No valid invitations found' }), { status: 404 });
         }
 
         // Check if game already exists
-        const existingGame = await db.get(`SELECT * FROM Games WHERE CreatorId = ? OR JoinerId = ?`, [invitation.SenderId, invitation.ReceiverId]);
+        const existingGame = await db.get(`SELECT * FROM Games WHERE CreatorId = ? OR JoinerId = ?`, [senderId, receiverId]);
         if (existingGame) {
             return new NextResponse(JSON.stringify({ success: false, message: 'Game already set up' }), { status: 409 });
         }
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
         const result = await db.run(`
             INSERT INTO Games (CreatorId, JoinerId, Board, CreatorPieces, JoinerPieces, DateCreated)
             VALUES (?, ?, ?, ?, ?, datetime('now'))`,
-            [invitation.SenderId, invitation.ReceiverId, JSON.stringify({}), JSON.stringify(tiles.creator), JSON.stringify(tiles.joiner)]
+            [senderId, receiverId, JSON.stringify({}), JSON.stringify(tiles.creator), JSON.stringify(tiles.joiner)]
         );
 
         return new NextResponse(JSON.stringify({ success: true, gameId: result.lastID }), { status: 201 });
