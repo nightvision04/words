@@ -35,7 +35,7 @@ export default function Lobby() {
 
   const goToGame = async (senderId: number, receiverId: number) => {
     try {
-      const response = await fetch(`${baseUrl}/api/send-invite`, {
+      const response = await fetch(`${baseUrl}/api/setup-game`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
