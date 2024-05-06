@@ -34,49 +34,54 @@ export default function Lobby() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
   const [PlayerId, setPlayerId] = useState<number | null>(null);
 
-  const goToGame = async (senderId: number, receiverId: number) => {
-    try {
-      const response = await fetch(`${baseUrl}/api/setup-game`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ senderId, receiverId }),
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to send invite');
-        return;
+    const goToGame = async (senderId: number, receiverId: number, invitationId: number) => {
+      try {
+        const response = await fetch(`${baseUrl}/api/setup-game`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ senderId, receiverId, invitationId }),
+        });
+  
+        if (!response.ok) {
+          const errorData = await response.json();
+          setError(errorData.message || 'Failed to send invite');
+          return;
+        }
+  
+        // Navigate to game page with invitationId
+        router.push(`/game?invitationId=${invitationId}`);
+      } catch (error) {
+        setError('Network error occurred');
+        console.error('Failed to send invite:', error);
       }
+    };
+  
 
-      // Navigate to game page if the invite is successfully sent
-      router.push('/game');  // Removed 'baseUrl' from the path, assuming '/game' is correct
-    } catch (error) {
-      setError('Network error occurred');
-      console.error('Failed to send invite:', error);
-    }
-  };
-
-  const sendInvite = async (senderId: number | null, receiverId: number) => {
-    try {
-      const response = await fetch(`${baseUrl}/api/send-invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ senderId, receiverId }),
-      });
-      const data = await response.json();
-      if (!data.success) {
-        setError(data.message || 'Failed to send invite');
-      }else{
-        router.push(`${baseUrl}/game`);
+    const sendInvite = async (senderId: number | null, receiverId: number) => {
+      try {
+        const response = await fetch(`${baseUrl}/api/send-invite`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ senderId, receiverId }),
+        });
+        const data = await response.json();
+        if (!data.success) {
+          setError(data.message || 'Failed to send invite');
+        } else {
+          // Redirect to the game page with the invitationId from the response
+          router.push(`${baseUrl}/game?invitationId=${data.invitationId}`);
+        }
+      } catch (error) {
+        setError('Error sending invite');
+        console.error('Error sending invite:', error);
       }
-    } catch (error) {
-      setError('Error sending invite');
-    }
-  };
+    };
+    
 
   useEffect(() => {
     // Set the player ID from localStorage
@@ -168,7 +173,7 @@ export default function Lobby() {
           <p>You have an invitation from Player: {invitation.Name} </p>
           <button
             className="ml-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-            onClick={() => goToGame(invitation.SenderId, invitation.ReceiverId)}>Go to Game
+            onClick={() => goToGame(invitation.SenderId, invitation.ReceiverId, invitation.Id)}>Go to Game
           </button>
         </div>
       )}</p>

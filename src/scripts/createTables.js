@@ -74,11 +74,12 @@ const createGamesTable = async () => {
           DateCreated TEXT DEFAULT (datetime('now')),
           CreatorScore INTEGER DEFAULT 0,
           JoinerScore INTEGER DEFAULT 0,
-          Turn TEXT CHECK(Turn IN ('creator', 'joiner')),  -- Enforce valid values
+          Turn INTEGER DEFAULT 0,
           IsStarted INTEGER DEFAULT 0,
           IsCompleted INTEGER DEFAULT 0,
           Winner INTEGER,  -- ID of the winner
           Loser INTEGER,  -- ID of the loser
+          InvitationsId INTEGER REFERENCES Invitations(Id),
           FOREIGN KEY (CreatorId) REFERENCES Players(Id),
           FOREIGN KEY (JoinerId) REFERENCES Players(Id),
           FOREIGN KEY (Winner) REFERENCES Players(Id),
@@ -91,5 +92,36 @@ const createGamesTable = async () => {
 }
 
 createGamesTable().catch(err => {
+  console.error('Error creating table:', err);
+});
+
+
+const createGamesTurnTable = async () => {
+  const db = await open({
+      filename: 'mydatabase.db',
+      driver: sqlite3.Database
+  });
+
+  await db.exec(`
+      CREATE TABLE IF NOT EXISTS GamesTurn (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        GameId INTEGER NOT NULL,
+        IsCreatorTurn INTEGER NOT NULL CHECK(IsCreatorTurn IN (0, 1)),
+        TurnScore INTEGER DEFAULT 0,
+        DateCreated TEXT DEFAULT (datetime('now')),
+        LastModified TEXT DEFAULT (datetime('now')),
+        LettersPlayed TEXT,  -- JSON payload for letters and their positions
+        StartLetters TEXT,   -- JSON list of tiles at the start of the turn
+        LettersToAdd TEXT,   -- JSON list of new tiles added at the start of the turn
+        EndLetters TEXT,     -- JSON list of tiles at the end of the turn
+        FOREIGN KEY (GameId) REFERENCES Games(Id)
+      )
+  `);
+
+  console.log('GamesTurn table created');
+  await db.close();
+};
+
+createGamesTurnTable().catch(err => {
   console.error('Error creating table:', err);
 });

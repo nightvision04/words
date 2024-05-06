@@ -36,4 +36,4 @@ function distributeTiles(scrabblePieces) {
     };
 }
 
-export { distributeTiles };
+export { distributeTiles , shuffleArray};
