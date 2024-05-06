@@ -8,9 +8,12 @@ export async function POST(req: Request) {
     try {
         // Fetch the game that matches the invitation ID
         const game = await db.get(`
-            SELECT g.* FROM Games g
+            SELECT g.*, gt.*  FROM Games g
             JOIN Invitations i ON g.InvitationsId = i.Id
-            WHERE i.Id = ? AND i.Status = 'accepted'`, [invitationId]);
+            JOIN GamesTurn gt ON gt.GameId = g.Id
+            WHERE i.Id = ? AND i.Status = 'accepted' and LettersPlayed IS NULL
+            ORDER BY gt.Id DESC
+            LIMIT 1`, [invitationId]);
 
         await db.close();
 

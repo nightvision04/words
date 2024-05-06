@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import setupDatabase from '../../../lib/db';
 
 interface Tile {
-  Letter: string;
+  letter: string;
   X: number;
   Y: number;
 }
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
                 SET LettersPlayed = ?, TurnScore = ?, EndLetters = ?, LastModified = datetime('now')
                 WHERE GameId = ? AND LastModified = (
                     SELECT MAX(LastModified) FROM GamesTurn WHERE GameId = ?
-                )`, [JSON.stringify(playedTiles), score, JSON.stringify(currentTiles.filter(ct => !playedTiles.some(pt => pt.Letter === ct.Letter))), gameId, gameId]
+                )`, [JSON.stringify(playedTiles), score, JSON.stringify(currentTiles.filter(ct => !playedTiles.some(pt => pt.letter === ct.letter))), gameId, gameId]
             );
 
             // Update game board
@@ -86,13 +86,15 @@ function calculateScore(gameId: number, tiles: Tile[]): number {
     return tiles.length; // Placeholder
 }
 
-function updateBoard(currentBoard: string, tiles: Tile[]): string[] {
-    const board = JSON.parse(currentBoard);
+function updateBoard(currentBoard: string, tiles: Tile[]): string[][] {
+    const board: string[][] = JSON.parse(currentBoard);
     tiles.forEach(tile => {
-        board[tile.Y * 15 + tile.X] = tile.Letter; // why is Y being multiplied by 15??
+        // Directly update the 2D array without any index calculation
+        board[tile.Y][tile.X] = tile.letter;
     });
     return board;
 }
+
 
 function drawTiles(pool: ScrabblePiece[], currentTileCount: number): { newTiles: ScrabblePiece[], remainingTiles: ScrabblePiece[] } {
     const neededTiles = 7 - currentTileCount;
@@ -139,7 +141,7 @@ async function validateWords(gameId: number, newTiles: Tile[]): Promise<boolean>
                 console.error('Tile placement error: Space is already occupied.');
                 return false;
             }
-            board[tile.Y][tile.X] = tile.Letter;
+            board[tile.Y][tile.X] = tile.letter;
         }
 
         // Validate that all new words formed are correct
