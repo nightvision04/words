@@ -5,7 +5,7 @@ interface Tile {
     letter: string;
     X: number;
     Y: number;
-  }
+}
 
 export async function POST(req: Request) {
   const db = await setupDatabase();
@@ -18,7 +18,17 @@ export async function POST(req: Request) {
       return new NextResponse(JSON.stringify({ success: false, message: 'Game not found' }), { status: 404 });
     }
 
-    const board = JSON.parse(game.Board);
+    const board: string[][] = JSON.parse(game.Board);
+
+    // Validate that the spaces are not already occupied
+    for (const tile of tiles) {
+      if (board[tile.Y][tile.X] !== '') {
+        await db.close();
+        return new NextResponse(JSON.stringify({ success: false, message: `Space is already occupied at (${tile.X}, ${tile.Y})` }), { status: 400 });
+      }
+    }
+
+    // Update the board with the new tiles
     tiles.forEach(tile => {
       board[tile.Y][tile.X] = tile.letter;
     });

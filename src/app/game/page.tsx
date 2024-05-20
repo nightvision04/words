@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface Tile {
@@ -27,7 +27,7 @@ interface PlayerTile {
   points: number;
 }
 
-export default function ScrabbleBoard() {
+function ScrabbleBoard() {
   const [game, setGame] = useState<Game | null>(null);
   const [playerTiles, setPlayerTiles] = useState<PlayerTile[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -189,5 +189,13 @@ export default function ScrabbleBoard() {
         </>
       )}
     </div>
+  );
+}
+
+export default function GamePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ScrabbleBoard />
+    </Suspense>
   );
 }
