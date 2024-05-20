@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         return new NextResponse(JSON.stringify({ success: false, message: 'Invalid move' }), { status: 400 });
       }
 
-      const score = calculateScore(gameId, playedTiles);
+      const score = calculateScore(playedTiles);
       const updatedTiles = updateBoard(game.Board, playedTiles);
 
       await db.run(`
@@ -75,9 +75,12 @@ export async function POST(req: Request) {
   }
 }
 
-function calculateScore(gameId: number, tiles: Tile[]): number {
-  // Your scoring logic here
-  return tiles.length; // Placeholder
+function calculateScore(tiles: Tile[]): number {
+  // Implement your scoring logic here
+  return tiles.reduce((score, tile) => {
+    // Example scoring: each tile is worth 1 point
+    return score + 1;
+  }, 0);
 }
 
 function updateBoard(currentBoard: string, tiles: Tile[]): string[][] {
@@ -115,37 +118,42 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 async function validateWords(gameId: number, newTiles: Tile[]): Promise<boolean> {
-    const db = await setupDatabase();
-  
-    try {
-      const game = await db.get(`SELECT Board FROM Games WHERE Id = ?`, [gameId]);
-      if (!game) {
-        console.error('Game not found');
+  const db = await setupDatabase();
+
+  try {
+    const game = await db.get(`SELECT Board FROM Games WHERE Id = ?`, [gameId]);
+    if (!game) {
+      console.error('Game not found');
+      return false;
+    }
+
+    const board: string[][] = JSON.parse(game.Board);
+
+    console.log('Current Board:', board);
+    console.log('New Tiles:', newTiles);
+
+    // Only validate new tiles, ignore already placed tiles
+    for (const tile of newTiles) {
+      if (board[tile.Y][tile.X] !== '') {
+        console.error(`Tile placement error: Space is already occupied at (${tile.X}, ${tile.Y}).`);
         return false;
       }
-  
-      const board: string[][] = JSON.parse(game.Board);
-  
-      console.log('Current Board:', board);
-      console.log('New Tiles:', newTiles);
-  
-      // Only validate new tiles, ignore already placed tiles
-      for (const tile of newTiles) {
-        if (board[tile.Y][tile.X] !== '') {
-          console.error(`Tile placement error: Space is already occupied at (${tile.X}, ${tile.Y}).`);
-          return false;
-        }
-        board[tile.Y][tile.X] = tile.letter;
-      }
-  
-      // Add logic to validate words here
-      const isValid = true; // Placeholder for now
-      return isValid;
-    } catch (error) {
-      console.error('Database error:', error);
-      return false;
-    } finally {
-      db.close();
+      board[tile.Y][tile.X] = tile.letter;
     }
+
+    // Add logic to validate words here
+    const isValid = checkIfWordsAreValid(board, newTiles); // Implement this function
+    return isValid;
+  } catch (error) {
+    console.error('Database error:', error);
+    return false;
+  } finally {
+    db.close();
   }
-  
+}
+
+function checkIfWordsAreValid(board: string[][], newTiles: Tile[]): boolean {
+  // Implement word validation logic here
+  // Example: Check if tiles form valid words horizontally and vertically
+  return true; // Placeholder
+}
