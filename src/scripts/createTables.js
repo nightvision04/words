@@ -114,6 +114,7 @@ const createGamesTurnTable = async () => {
         StartLetters TEXT,   -- JSON list of tiles at the start of the turn
         LettersToAdd TEXT,   -- JSON list of new tiles added at the start of the turn
         EndLetters TEXT,     -- JSON list of tiles at the end of the turn
+        IsTurnEnded INTEGER DEFAULT 0,
         FOREIGN KEY (GameId) REFERENCES Games(Id)
       )
   `);
