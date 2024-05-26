@@ -9,14 +9,22 @@ const appDirectory = path.join(__dirname, '../');
 const filePatterns = ['**/*.ts', '**/*.tsx', '**/*.js'];
 
 // Subfolders and files to include
+// const includeList = [
+//   'app/game/page.tsx',
+//   'app/api/setup-game/route.ts',
+//   'app/api/update-board/route.ts',
+//   'app/api/update-turn/route.ts',
+//   'scripts/createTables.js',
+//   'scripts/distributeTiles.js',
+// ];
 const includeList = [
-  'app/game/page.tsx',
-  'app/api/setup-game/route.ts',
-  'app/api/update-board/route.ts',
-  'app/api/update-turn/route.ts',
-  'scripts/createTables.js',
-  'scripts/distributeTiles.js',
-];
+    'app/game/page.tsx',
+    'app/api/setup-game/route.ts',
+    'app/api/add-user/route.ts',
+    'app/api/check-for-invite/route.ts',
+    'app/api/check-game-status/route.ts',
+    'app/api/get-id-from-from/route.ts',
+  ];
 
 // Get all files matching the patterns
 function getAllFiles(directory, patterns) {

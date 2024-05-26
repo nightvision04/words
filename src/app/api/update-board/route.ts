@@ -1,15 +1,19 @@
+// src/app/api/update-board/route.ts
 import { NextResponse } from 'next/server';
 import setupDatabase from '../../../lib/db';
 
 interface Tile {
-    letter: string;
-    X: number;
-    Y: number;
+  letter: string;
+  X: number;
+  Y: number;
 }
 
 export async function POST(req: Request) {
   const db = await setupDatabase();
   const { gameId, playerId, tiles }: { gameId: number; playerId: number; tiles: Tile[] } = await req.json();
+
+    console.log('Tiles:', tiles); // Debugging
+    console.log('GameId:', gameId); // Debugging
 
   try {
     const game = await db.get(`SELECT * FROM Games WHERE Id = ?`, [gameId]);
@@ -28,7 +32,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Update the board with the new tiles
+    // Temporarily update the board with the new tiles for validation
     tiles.forEach(tile => {
       board[tile.Y][tile.X] = tile.letter;
     });

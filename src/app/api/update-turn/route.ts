@@ -1,3 +1,4 @@
+// src/app/api/update-turn/route.ts
 import { NextResponse } from 'next/server';
 import setupDatabase from '../../../lib/db';
 import { convertTilesToScrabblePieces } from '../../../scripts/tileConversion';
@@ -6,7 +7,7 @@ interface Tile {
   letter: string;
   X: number;
   Y: number;
-  isVisible: boolean; // Add isVisible property to Tile interface
+  isVisible: boolean;
 }
 
 interface ScrabblePiece {
@@ -22,34 +23,57 @@ export async function POST(req: Request) {
     await db.run('BEGIN TRANSACTION');  // Start transaction
 
     const game = await db.get(`SELECT * FROM Games WHERE Id = ?`, [gameId]);
+    console.log('Retrieved game:', game); // Debugging
+
     if (!game) {
       await db.run('ROLLBACK');
       await db.close();
       return new NextResponse(JSON.stringify({ success: false, message: 'Game not found' }), { status: 404 });
     }
 
-    if (action === 'endTurn') {
-      const lastTurn = await db.get(`
-        SELECT * FROM GamesTurn
-        WHERE GameId = ?
-        ORDER BY LastModified DESC
-        LIMIT 1`, [gameId]);
+    const lastTurn = await db.get(`
+      SELECT * FROM GamesTurn
+      WHERE GameId = ?
+      ORDER BY LastModified DESC
+      LIMIT 1`, [gameId]);
 
+    if (!lastTurn) {
+      await db.run('ROLLBACK');
+      await db.close();
+      return new NextResponse(JSON.stringify({ success: false, message: 'No previous turn found' }), { status: 404 });
+    }
+
+    const isCreatorTurn = lastTurn.IsCreatorTurn;
+    console.log('lastTurn.IsCreatorTurn:', lastTurn.IsCreatorTurn);
+    console.log('isCreatorTurn:', isCreatorTurn);
+
+    if (isNaN(isCreatorTurn)) {
+      throw new Error('isCreatorTurn is not a valid number');
+    }
+
+    if (action === 'endTurn') {
       if (lastTurn.IsTurnEnded) {
         await db.run('ROLLBACK');
         await db.close();
         return new NextResponse(JSON.stringify({ success: false, message: 'Turn already ended' }), { status: 400 });
       }
 
-      const isValid = await validateWords(game.Board, playedTiles);
+      if (playedTiles.length === 0) {
+        await db.run('ROLLBACK');
+        await db.close();
+        return new NextResponse(JSON.stringify({ success: false, message: 'No tiles played' }), { status: 400 });
+      }
+
+      const { isValid, error: validationError } = await validateWords(game.Board, playedTiles);
       if (!isValid) {
         await db.run('ROLLBACK');
         await db.close();
-        return new NextResponse(JSON.stringify({ success: false, message: 'Invalid move' }), { status: 400 });
+        return new NextResponse(JSON.stringify({ success: false, message: validationError || 'Invalid move' }), { status: 400 });
       }
 
+      // Only update the board after successful validation
+      const updatedBoard = updateBoard(game.Board, playedTiles, currentTiles);
       const score = calculateScore(playedTiles);
-      const updatedTiles = updateBoard(game.Board, playedTiles);
 
       await db.run(`
         UPDATE GamesTurn
@@ -60,18 +84,21 @@ export async function POST(req: Request) {
       await db.run(`
         UPDATE Games
         SET Board = ?, Turn = ?
-        WHERE Id = ?`, [JSON.stringify(updatedTiles), game.Turn + 1, gameId]
+        WHERE Id = ?`, [JSON.stringify(updatedBoard), game.Turn + 1, gameId]
       );
 
       const scrabblePieces = convertTilesToScrabblePieces(currentTiles);
       const { newTiles, remainingTiles } = drawTiles(scrabblePieces, scrabblePieces.length);
 
+      const nextIsCreatorTurn = 1 - isCreatorTurn;
+      console.log('nextIsCreatorTurn:', nextIsCreatorTurn);
+
       await db.run(`
         INSERT INTO GamesTurn (GameId, IsCreatorTurn, StartLetters, LettersToAdd, DateCreated, LastModified, IsTurnEnded)
-        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), 0)`, [gameId, 1 - game.IsCreatorTurn, JSON.stringify(currentTiles), JSON.stringify(newTiles)]
+        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), 0)`, [gameId, nextIsCreatorTurn, JSON.stringify(currentTiles), JSON.stringify(newTiles)]
       );
 
-      const piecesField = game.IsCreatorTurn ? 'CreatorPieces' : 'JoinerPieces';
+      const piecesField = isCreatorTurn ? 'CreatorPieces' : 'JoinerPieces';
       await db.run(`
         UPDATE Games
         SET ${piecesField} = ?
@@ -87,9 +114,18 @@ export async function POST(req: Request) {
       return new NextResponse(JSON.stringify({ success: false, message: 'Invalid action' }), { status: 400 });
     }
   } catch (error) {
-    await db.run('ROLLBACK');
-    await db.close();
-    return new NextResponse(JSON.stringify({ success: false, message: 'Database error', error }), { status: 500 });
+    console.error('Error during update-turn:', error);
+
+    // Type guard to check if error is an instance of Error
+    if (error instanceof Error) {
+      await db.run('ROLLBACK');
+      await db.close();
+      return new NextResponse(JSON.stringify({ success: false, message: 'Database error', error: error.message }), { status: 500 });
+    } else {
+      await db.run('ROLLBACK');
+      await db.close();
+      return new NextResponse(JSON.stringify({ success: false, message: 'Unknown error occurred' }), { status: 500 });
+    }
   }
 }
 
@@ -101,14 +137,11 @@ function calculateScore(tiles: Tile[]): number {
   }, 0);
 }
 
-function updateBoard(currentBoard: string, tiles: Tile[]): string[][] {
+function updateBoard(currentBoard: string, tiles: Tile[], currentTurnTiles: Tile[]): string[][] {
   const board: string[][] = JSON.parse(currentBoard);
   tiles.forEach(tile => {
-    if (board[tile.Y][tile.X] === '') {
-      board[tile.Y][tile.X] = tile.letter;
-    } else {
-      console.error(`Cannot update board: Space at (${tile.X}, ${tile.Y}) is already occupied.`);
-    }
+    // Always override the tile, regardless of occupancy
+    board[tile.Y][tile.X] = tile.letter;
   });
   return board;
 }
@@ -139,7 +172,7 @@ function shuffleArray<T>(array: T[]): T[] {
   return array;
 }
 
-async function validateWords(currentBoard: string, newTiles: Tile[]): Promise<boolean> {
+async function validateWords(currentBoard: string, newTiles: Tile[]): Promise<{ isValid: boolean, error?: string }> {
   const board: string[][] = JSON.parse(currentBoard);
 
   console.log('Current Board:', board);
@@ -150,16 +183,13 @@ async function validateWords(currentBoard: string, newTiles: Tile[]): Promise<bo
 
   // Only validate new tiles, ignore already placed tiles
   for (const tile of newTiles) {
-    if (tempBoard[tile.Y][tile.X] !== '') {
-      console.error(`Tile placement error: Space is already occupied at (${tile.X}, ${tile.Y}). Current value: ${tempBoard[tile.Y][tile.X]}`);
-      return false;
-    }
+    // Allow overriding by skipping the occupied check
     tempBoard[tile.Y][tile.X] = tile.letter;
   }
 
   // Add logic to validate words here
   const isValid = checkIfWordsAreValid(tempBoard, newTiles); // Implement this function
-  return isValid;
+  return { isValid };
 }
 
 function checkIfWordsAreValid(board: string[][], newTiles: Tile[]): boolean {

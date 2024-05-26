@@ -53,6 +53,7 @@ function ScrabbleBoard() {
         if (data.success && data.game) {
           const parsedBoard = JSON.parse(data.game.Board);
           data.game.Board = parsedBoard;
+          console.log('checkGameStatus Game:', data.game);
           setGame(data.game);
           setIsCreator(data.game.CreatorId === storedPlayerId);
           setPlayerTiles(
@@ -76,32 +77,60 @@ function ScrabbleBoard() {
   const onDrop = async (e: React.DragEvent, x: number, y: number) => {
     const letter = e.dataTransfer.getData("letter");
     const newTile: Tile = { letter, X: x, Y: y, isVisible: true }; // Set isVisible to true for current player
-    setPlayedTiles([...playedTiles, newTile]);
-
+  
     if (game) {
-      const updatedBoard = game.Board.map(row => row.slice()); // Create a copy of the board
+      // Fetch the latest game state from the server
+      const response = await fetch(`${baseUrl}/api/check-game-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invitationId })
+      });
+      const data = await response.json();
+      if (!data.success) {
+        console.error('Failed to fetch game status:', data.message);
+        return;
+      }
+  
+      const latestGame = data.game;
+      const updatedBoard = JSON.parse(latestGame.Board);
+
+
+      console.log('OnDrop latestGame:', latestGame);
       console.log('Current Board:', updatedBoard);
       console.log(`Placing Tile: ${letter} at (${x}, ${y})`);
-
+  
       if (updatedBoard[y][x] !== '') {
         console.error(`Cannot place tile: Space at (${x}, ${y}) is already occupied.`);
         return; // Prevent placing tile if space is occupied
       }
-
+  
       updatedBoard[y][x] = letter; // Update the board with the letter
-      setGame({ ...game, Board: updatedBoard });
-
-      await fetch(`${baseUrl}/api/update-board`, {
+      setGame({ ...latestGame, Board: updatedBoard });
+      setPlayedTiles([...playedTiles, newTile]);
+  
+      const updateResponse = await fetch(`${baseUrl}/api/update-board`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gameId: game.Id,
+          gameId: latestGame.Id,
           playerId,
           tiles: [newTile]
         })
       });
+  
+      const updateData = await updateResponse.json();
+      if (!updateData.success) {
+        console.error('Failed to update board:', updateData.message);
+        // Optionally, handle UI changes for invalid move
+      } else {
+        console.log('Board updated successfully');
+      }
     }
   };
+  
+  
+  
+  
 
   const onDragStart = (e: React.DragEvent, letter: string) => {
     e.dataTransfer.setData("letter", letter);
@@ -109,30 +138,49 @@ function ScrabbleBoard() {
 
   const handlePlayClick = async () => {
     if (game) {
+      // Fetch the latest game state from the server
+      const response = await fetch(`${baseUrl}/api/check-game-status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invitationId })
+      });
+      const data = await response.json();
+      if (!data.success) {
+        console.error('Failed to fetch game status:', data.message);
+        return;
+      }
+  
+      const latestGame = data.game;
       const currentTiles = playerTiles.filter(tile => !playedTiles.some(pt => pt.letter === tile.letter));
       const updatedPlayedTiles = playedTiles.map(tile => ({ ...tile, isVisible: false })); // Set isVisible to false for opponent
-
-      const response = await fetch(`${baseUrl}/api/update-turn`, {
+  
+      const playResponse = await fetch(`${baseUrl}/api/update-turn`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gameId: game.Id,
+          gameId: latestGame.Id,
           playerId,
           action: 'endTurn',
           playedTiles: updatedPlayedTiles,
           currentTiles
         })
       });
-      const data = await response.json();
-      if (data.success) {
+  
+      const playData = await playResponse.json();
+      if (playData.success) {
         console.log('Turn updated successfully');
         setPlayerTiles(currentTiles);
         setPlayedTiles([]);
       } else {
-        console.error('Failed to update turn:', data.message);
+        console.error('Failed to update turn:', playData.message);
+        // Optionally, handle UI changes for invalid turn
       }
     }
   };
+  
+  
+  
+  
 
   if (loading) {
     return <div>Loading... Waiting for the other player to join.</div>;
@@ -151,10 +199,10 @@ function ScrabbleBoard() {
               const y = Math.floor(index / 15);
               const isPlayedTile = playedTiles.some(tile => tile.X === x && tile.Y === y);
               const tile = game.Board[y][x];
-
+  
               const playedTile = playedTiles.find(tile => tile.X === x && tile.Y === y);
               const shouldDisplayLetter = playedTile && playedTile.isVisible;
-
+  
               return (
                 <div
                   key={index}
@@ -190,6 +238,7 @@ function ScrabbleBoard() {
       )}
     </div>
   );
+  
 }
 
 export default function GamePage() {
