@@ -75,10 +75,14 @@ export async function POST(req: Request) {
       const updatedBoard = updateBoard(game.Board, playedTiles, currentTiles);
       const score = calculateScore(playedTiles);
 
+      const scrabblePieces = convertTilesToScrabblePieces(currentTiles);
+      const { newTiles, remainingTiles } = drawTiles(scrabblePieces, scrabblePieces.length);
+
+      // Update the existing turn
       await db.run(`
         UPDATE GamesTurn
-        SET LettersPlayed = ?, TurnScore = ?, EndLetters = ?, LastModified = datetime('now'), IsTurnEnded = 1
-        WHERE GameId = ? AND Id = ?`, [JSON.stringify(playedTiles), score, JSON.stringify(currentTiles), gameId, lastTurn.Id]
+        SET LettersPlayed = ?, TurnScore = ?, EndLetters = ?, LettersAddedAfterTurn = ?, LastModified = datetime('now'), IsTurnEnded = 1
+        WHERE GameId = ? AND Id = ?`, [JSON.stringify(playedTiles), score, JSON.stringify(currentTiles), JSON.stringify(newTiles), gameId, lastTurn.Id]
       );
 
       await db.run(`
@@ -87,15 +91,12 @@ export async function POST(req: Request) {
         WHERE Id = ?`, [JSON.stringify(updatedBoard), game.Turn + 1, gameId]
       );
 
-      const scrabblePieces = convertTilesToScrabblePieces(currentTiles);
-      const { newTiles, remainingTiles } = drawTiles(scrabblePieces, scrabblePieces.length);
-
       const nextIsCreatorTurn = 1 - isCreatorTurn;
       console.log('nextIsCreatorTurn:', nextIsCreatorTurn);
 
       await db.run(`
-        INSERT INTO GamesTurn (GameId, IsCreatorTurn, StartLetters, LettersAddedAfterTurn, DateCreated, LastModified, IsTurnEnded)
-        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), 0)`, [gameId, nextIsCreatorTurn, JSON.stringify(currentTiles), JSON.stringify(newTiles)]
+        INSERT INTO GamesTurn (GameId, IsCreatorTurn, StartLetters, DateCreated, LastModified, IsTurnEnded)
+        VALUES (?, ?, ?, datetime('now'), datetime('now'), 0)`, [gameId, nextIsCreatorTurn, JSON.stringify(currentTiles)]
       );
 
       const piecesField = isCreatorTurn ? 'CreatorPieces' : 'JoinerPieces';
