@@ -80,7 +80,7 @@ export async function POST(req: Request) {
 
       // Update the existing turn
       const endLetters = updateEndLetters(JSON.parse(lastTurn.StartLetters), playedTiles);
-      
+
       await db.run(`
         UPDATE GamesTurn
         SET LettersPlayed = ?, TurnScore = ?, EndLetters = ?, LettersAddedAfterTurn = ?, LastModified = datetime('now'), IsTurnEnded = 1
@@ -103,11 +103,13 @@ export async function POST(req: Request) {
         VALUES (?, ?, ?, datetime('now'), datetime('now'), 0)`, [gameId, nextIsCreatorTurn, nextStartLetters]
       );
 
+      // Remove played tiles from the player's pieces
+      const updatedPieces = removePlayedTiles(isCreatorTurn ? JSON.parse(game.CreatorPieces) : JSON.parse(game.JoinerPieces), playedTiles);
       const piecesField = isCreatorTurn ? 'CreatorPieces' : 'JoinerPieces';
       await db.run(`
         UPDATE Games
-        SET ${piecesField} = ?
-        WHERE Id = ?`, [JSON.stringify(remainingTiles), gameId]
+        SET ${piecesField} = ?, ${isCreatorTurn ? 'CreatorCurrentTiles' : 'JoinerCurrentTiles'} = ?
+        WHERE Id = ?`, [JSON.stringify(updatedPieces), JSON.stringify(newTiles), gameId]
       );
 
       await db.run('COMMIT');  // Commit transaction
@@ -215,4 +217,17 @@ function checkIfWordsAreValid(board: string[][], newTiles: Tile[]): boolean {
   // Example: Check if tiles form valid words horizontally and vertically
   // Add more detailed validation logic as needed
   return true; // Placeholder
+}
+
+function removePlayedTiles(playerPieces: ScrabblePiece[], playedTiles: Tile[]): ScrabblePiece[] {
+  const remainingPieces = [...playerPieces];
+
+  playedTiles.forEach(tile => {
+    const index = remainingPieces.findIndex(piece => piece.letter === tile.letter);
+    if (index !== -1) {
+      remainingPieces.splice(index, 1);
+    }
+  });
+
+  return remainingPieces;
 }

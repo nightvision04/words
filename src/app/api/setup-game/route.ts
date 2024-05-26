@@ -38,9 +38,11 @@ export async function POST(req: Request) {
 
         const tiles = distributeTiles(scrabblePieces);
         const result = await db.run(`
-        INSERT INTO Games (CreatorId, JoinerId, Board, CreatorPieces, JoinerPieces, DateCreated, IsStarted, InvitationsId, Turn)
-        VALUES (?, ?, ?, ?, ?, datetime('now'), 1, ?, 1)`, [senderId, receiverId, emptyBoardJson, JSON.stringify(tiles.creator), JSON.stringify(tiles.joiner), invitation.Id]
+        INSERT INTO Games (CreatorId, JoinerId, Board, CreatorPieces, JoinerPieces, CreatorCurrentTiles, JoinerCurrentTiles, DateCreated, IsStarted, InvitationsId, Turn)
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), 1, ?, 1)`, 
+        [senderId, receiverId, emptyBoardJson, JSON.stringify(tiles.creator), JSON.stringify(tiles.joiner), JSON.stringify(tiles.creator.slice(0, 7)), JSON.stringify(tiles.joiner.slice(0, 7)), invitation.Id]
         );
+
 
         const gameId = result.lastID;
 

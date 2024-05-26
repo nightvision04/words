@@ -69,8 +69,8 @@ const createGamesTable = async () => {
           CreatorId INTEGER,
           JoinerId INTEGER,
           Board TEXT,  -- Will hold JSON representation of the board
-          CreatorPieces TEXT,  -- JSON of pieces
-          JoinerPieces TEXT,  -- JSON of pieces
+          CreatorPieces TEXT,  -- JSON of pieces. The assigned pieces to the creator minus the piecces that have been played by the creator.
+          JoinerPieces TEXT,  -- JSON of pieces. The assigned pieces to the joiner minus the piecces that have been played by the joiner.
           DateCreated TEXT DEFAULT (datetime('now')),
           CreatorScore INTEGER DEFAULT 0,
           JoinerScore INTEGER DEFAULT 0,
@@ -79,6 +79,8 @@ const createGamesTable = async () => {
           IsCompleted INTEGER DEFAULT 0,
           Winner INTEGER,  -- ID of the winner
           Loser INTEGER,  -- ID of the loser
+          CreatorCurrentTiles TEXT,  -- JSON of current tiles
+          JoinerCurrentTiles TEXT,  -- JSON of current tiles
           InvitationsId INTEGER REFERENCES Invitations(Id),
           FOREIGN KEY (CreatorId) REFERENCES Players(Id),
           FOREIGN KEY (JoinerId) REFERENCES Players(Id),

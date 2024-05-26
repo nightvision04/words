@@ -42,7 +42,7 @@ function ScrabbleBoard() {
     if (typeof window !== 'undefined') {
       const storedPlayerId = parseInt(localStorage.getItem('PlayerId') || '0');
       setPlayerId(storedPlayerId);
-
+  
       const checkGameStatus = async () => {
         const response = await fetch(`${baseUrl}/api/check-game-status`, {
           method: 'POST',
@@ -53,13 +53,13 @@ function ScrabbleBoard() {
         if (data.success && data.game) {
           const parsedBoard = JSON.parse(data.game.Board);
           data.game.Board = parsedBoard;
-
+  
           setGame(data.game);
           setIsCreator(data.game.CreatorId === storedPlayerId);
           setPlayerTiles(
             data.game.CreatorId === storedPlayerId
-              ? JSON.parse(data.game.CreatorPieces).slice(0, 7)
-              : JSON.parse(data.game.JoinerPieces).slice(0, 7)
+              ? JSON.parse(data.game.CreatorCurrentTiles)
+              : JSON.parse(data.game.JoinerCurrentTiles)
           );
           setLoading(false);
         } else if (!data.success && data.message) {
@@ -67,12 +67,13 @@ function ScrabbleBoard() {
           setLoading(false);
         }
       };
-
+  
       checkGameStatus();
       const interval = setInterval(checkGameStatus, 1000);
       return () => clearInterval(interval);
     }
   }, [baseUrl, invitationId]);
+  
 
   const onDrop = async (e: React.DragEvent, x: number, y: number) => {
     const letter = e.dataTransfer.getData("letter");
