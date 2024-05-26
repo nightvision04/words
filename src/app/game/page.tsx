@@ -18,7 +18,7 @@ interface Game {
   Turn: number;
   LettersPlayed: string | null;
   StartLetters: string | null;
-  LettersToAdd: string | null;
+  LettersAddedAfterTurn: string | null;
   EndLetters: string | null;
 }
 
@@ -53,7 +53,7 @@ function ScrabbleBoard() {
         if (data.success && data.game) {
           const parsedBoard = JSON.parse(data.game.Board);
           data.game.Board = parsedBoard;
-          console.log('checkGameStatus Game:', data.game);
+          console.log('checkGameStatus Game:', data.game); // The Id field inthe data.game object is GamesTurn.Id not Games.Id. Use daata.game.GameId 
           setGame(data.game);
           setIsCreator(data.game.CreatorId === storedPlayerId);
           setPlayerTiles(
@@ -112,7 +112,7 @@ function ScrabbleBoard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gameId: latestGame.Id,
+          gameId: latestGame.GameId,
           playerId,
           tiles: [newTile]
         })
@@ -158,7 +158,7 @@ function ScrabbleBoard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gameId: latestGame.Id,
+          gameId: latestGame.GameId,
           playerId,
           action: 'endTurn',
           playedTiles: updatedPlayedTiles,

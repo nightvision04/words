@@ -110,10 +110,10 @@ const createGamesTurnTable = async () => {
         TurnScore INTEGER DEFAULT 0,
         DateCreated TEXT DEFAULT (datetime('now')),
         LastModified TEXT DEFAULT (datetime('now')),
-        LettersPlayed TEXT,  -- JSON payload for letters and their positions
-        StartLetters TEXT,   -- JSON list of tiles at the start of the turn
-        LettersToAdd TEXT,   -- JSON list of new tiles added at the start of the turn
-        EndLetters TEXT,     -- JSON list of tiles at the end of the turn
+        LettersPlayed TEXT,  -- JSON payload for letters and their positions. "What was played"
+        StartLetters TEXT,   -- JSON list of tiles at the start of the turn "What letters did the player have at the start of the turn"
+        LettersAddedAfterTurn TEXT,   -- JSON list of new tiles added at the start of the turn
+        EndLetters TEXT,     -- JSON list of tiles at the end of the turn "What letters were left at the end before new letters added"
         IsTurnEnded INTEGER DEFAULT 0,
         FOREIGN KEY (GameId) REFERENCES Games(Id)
       )

@@ -94,7 +94,7 @@ export async function POST(req: Request) {
       console.log('nextIsCreatorTurn:', nextIsCreatorTurn);
 
       await db.run(`
-        INSERT INTO GamesTurn (GameId, IsCreatorTurn, StartLetters, LettersToAdd, DateCreated, LastModified, IsTurnEnded)
+        INSERT INTO GamesTurn (GameId, IsCreatorTurn, StartLetters, LettersAddedAfterTurn, DateCreated, LastModified, IsTurnEnded)
         VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), 0)`, [gameId, nextIsCreatorTurn, JSON.stringify(currentTiles), JSON.stringify(newTiles)]
       );
 
