@@ -53,7 +53,7 @@ function ScrabbleBoard() {
         if (data.success && data.game) {
           const parsedBoard = JSON.parse(data.game.Board);
           data.game.Board = parsedBoard;
-          console.log('checkGameStatus Game:', data.game); // The Id field inthe data.game object is GamesTurn.Id not Games.Id. Use daata.game.GameId 
+
           setGame(data.game);
           setIsCreator(data.game.CreatorId === storedPlayerId);
           setPlayerTiles(

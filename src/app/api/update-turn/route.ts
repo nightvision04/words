@@ -79,10 +79,12 @@ export async function POST(req: Request) {
       const { newTiles, remainingTiles } = drawTiles(scrabblePieces, scrabblePieces.length);
 
       // Update the existing turn
+      const endLetters = updateEndLetters(JSON.parse(lastTurn.StartLetters), playedTiles);
+      
       await db.run(`
         UPDATE GamesTurn
         SET LettersPlayed = ?, TurnScore = ?, EndLetters = ?, LettersAddedAfterTurn = ?, LastModified = datetime('now'), IsTurnEnded = 1
-        WHERE GameId = ? AND Id = ?`, [JSON.stringify(playedTiles), score, JSON.stringify(currentTiles), JSON.stringify(newTiles), gameId, lastTurn.Id]
+        WHERE GameId = ? AND Id = ?`, [JSON.stringify(playedTiles), score, JSON.stringify(endLetters), JSON.stringify(newTiles), gameId, lastTurn.Id]
       );
 
       await db.run(`
@@ -94,9 +96,11 @@ export async function POST(req: Request) {
       const nextIsCreatorTurn = 1 - isCreatorTurn;
       console.log('nextIsCreatorTurn:', nextIsCreatorTurn);
 
+      const nextStartLetters = nextIsCreatorTurn ? JSON.stringify(JSON.parse(game.CreatorPieces).slice(0, 7)) : JSON.stringify(JSON.parse(game.JoinerPieces).slice(0, 7));
+
       await db.run(`
         INSERT INTO GamesTurn (GameId, IsCreatorTurn, StartLetters, DateCreated, LastModified, IsTurnEnded)
-        VALUES (?, ?, ?, datetime('now'), datetime('now'), 0)`, [gameId, nextIsCreatorTurn, JSON.stringify(currentTiles)]
+        VALUES (?, ?, ?, datetime('now'), datetime('now'), 0)`, [gameId, nextIsCreatorTurn, nextStartLetters]
       );
 
       const piecesField = isCreatorTurn ? 'CreatorPieces' : 'JoinerPieces';
@@ -171,6 +175,19 @@ function shuffleArray<T>(array: T[]): T[] {
   }
 
   return array;
+}
+
+function updateEndLetters(startLetters: ScrabblePiece[], playedTiles: Tile[]): ScrabblePiece[] {
+  const updatedLetters = [...startLetters];
+
+  playedTiles.forEach(tile => {
+    const index = updatedLetters.findIndex(piece => piece.letter === tile.letter);
+    if (index !== -1) {
+      updatedLetters.splice(index, 1);
+    }
+  });
+
+  return updatedLetters;
 }
 
 async function validateWords(currentBoard: string, newTiles: Tile[]): Promise<{ isValid: boolean, error?: string }> {
