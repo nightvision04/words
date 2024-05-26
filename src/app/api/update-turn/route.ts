@@ -1,4 +1,3 @@
-// src/app/api/update-turn/route.ts
 import { NextResponse } from 'next/server';
 import setupDatabase from '../../../lib/db';
 import { convertTilesToScrabblePieces } from '../../../scripts/tileConversion';
@@ -23,7 +22,7 @@ export async function POST(req: Request) {
     await db.run('BEGIN TRANSACTION');  // Start transaction
 
     const game = await db.get(`SELECT * FROM Games WHERE Id = ?`, [gameId]);
-    console.log('Retrieved game:', game); // Debugging
+    console.log('Game:', game);
 
     if (!game) {
       await db.run('ROLLBACK');
@@ -36,6 +35,7 @@ export async function POST(req: Request) {
       WHERE GameId = ?
       ORDER BY LastModified DESC
       LIMIT 1`, [gameId]);
+    console.log('LastTurn:', lastTurn);
 
     if (!lastTurn) {
       await db.run('ROLLBACK');
@@ -44,7 +44,6 @@ export async function POST(req: Request) {
     }
 
     const isCreatorTurn = lastTurn.IsCreatorTurn;
-    console.log('lastTurn.IsCreatorTurn:', lastTurn.IsCreatorTurn);
     console.log('isCreatorTurn:', isCreatorTurn);
 
     if (isNaN(isCreatorTurn)) {
@@ -75,11 +74,20 @@ export async function POST(req: Request) {
       const updatedBoard = updateBoard(game.Board, playedTiles, currentTiles);
       const score = calculateScore(playedTiles);
 
+      console.log('Current Tiles before draw:', currentTiles);
       const scrabblePieces = convertTilesToScrabblePieces(currentTiles);
-      const { newTiles, remainingTiles } = drawTiles(scrabblePieces, scrabblePieces.length);
+      console.log('Scrabble Pieces:', scrabblePieces);
+      const currentTileCount = currentTiles.length;
+      console.log('Current Tile Count:', currentTileCount);
+
+      // Draw tiles correctly based on current tile count
+      const { newTiles, remainingTiles } = drawTiles(scrabblePieces, currentTileCount);
+      console.log('New Tiles drawn:', newTiles);
+      console.log('Remaining Tiles in Pool:', remainingTiles);
 
       // Update the existing turn
       const endLetters = updateEndLetters(JSON.parse(lastTurn.StartLetters), playedTiles);
+      console.log('End Letters:', endLetters);
 
       await db.run(`
         UPDATE GamesTurn
@@ -94,9 +102,8 @@ export async function POST(req: Request) {
       );
 
       const nextIsCreatorTurn = 1 - isCreatorTurn;
-      console.log('nextIsCreatorTurn:', nextIsCreatorTurn);
-
       const nextStartLetters = nextIsCreatorTurn ? JSON.stringify(JSON.parse(game.CreatorPieces).slice(0, 7)) : JSON.stringify(JSON.parse(game.JoinerPieces).slice(0, 7));
+      console.log('Next Start Letters:', nextStartLetters);
 
       await db.run(`
         INSERT INTO GamesTurn (GameId, IsCreatorTurn, StartLetters, DateCreated, LastModified, IsTurnEnded)
@@ -106,6 +113,7 @@ export async function POST(req: Request) {
       // Remove played tiles from the player's pieces
       const updatedPieces = removePlayedTiles(isCreatorTurn ? JSON.parse(game.CreatorPieces) : JSON.parse(game.JoinerPieces), playedTiles);
       const piecesField = isCreatorTurn ? 'CreatorPieces' : 'JoinerPieces';
+      console.log('Updated Pieces:', updatedPieces);
       await db.run(`
         UPDATE Games
         SET ${piecesField} = ?, ${isCreatorTurn ? 'CreatorCurrentTiles' : 'JoinerCurrentTiles'} = ?
@@ -155,9 +163,12 @@ function updateBoard(currentBoard: string, tiles: Tile[], currentTurnTiles: Tile
 
 function drawTiles(pool: ScrabblePiece[], currentTileCount: number): { newTiles: ScrabblePiece[], remainingTiles: ScrabblePiece[] } {
   const neededTiles = 7 - currentTileCount;
+  console.log('Needed Tiles:', neededTiles);
   const shuffledTiles = shuffleArray(pool);
   const newTiles = shuffledTiles.slice(0, neededTiles);
   const remainingTiles = shuffledTiles.slice(neededTiles);
+  console.log('New Tiles after drawTiles function:', newTiles);
+  console.log('Remaining Tiles after drawTiles function:', remainingTiles);
   return { newTiles, remainingTiles };
 }
 
@@ -180,23 +191,13 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 function updateEndLetters(startLetters: ScrabblePiece[], playedTiles: Tile[]): ScrabblePiece[] {
-  const updatedLetters = [...startLetters];
-
-  playedTiles.forEach(tile => {
-    const index = updatedLetters.findIndex(piece => piece.letter === tile.letter);
-    if (index !== -1) {
-      updatedLetters.splice(index, 1);
-    }
-  });
-
+  const updatedLetters = startLetters.filter(letter => !playedTiles.some(tile => tile.letter === letter.letter));
+  console.log('Updated End Letters:', updatedLetters);
   return updatedLetters;
 }
 
 async function validateWords(currentBoard: string, newTiles: Tile[]): Promise<{ isValid: boolean, error?: string }> {
   const board: string[][] = JSON.parse(currentBoard);
-
-  console.log('Current Board:', board);
-  console.log('New Tiles:', newTiles);
 
   // Use a temporary board to validate the new tiles
   const tempBoard = board.map(row => [...row]);
