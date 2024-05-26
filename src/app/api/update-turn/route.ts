@@ -22,20 +22,18 @@ export async function POST(req: Request) {
     await db.run('BEGIN TRANSACTION');  // Start transaction
 
     const game = await db.get(`SELECT * FROM Games WHERE Id = ?`, [gameId]);
-    console.log('Game:', game);
-
     if (!game) {
       await db.run('ROLLBACK');
       await db.close();
       return new NextResponse(JSON.stringify({ success: false, message: 'Game not found' }), { status: 404 });
     }
 
+    const isCreator = game.CreatorId === playerId;
     const lastTurn = await db.get(`
       SELECT * FROM GamesTurn
-      WHERE GameId = ?
+      WHERE GameId = ? AND IsCreatorTurn = ?
       ORDER BY LastModified DESC
-      LIMIT 1`, [gameId]);
-    console.log('LastTurn:', lastTurn);
+      LIMIT 1`, [gameId, isCreator ? 1 : 0]);
 
     if (!lastTurn) {
       await db.run('ROLLBACK');
@@ -44,8 +42,6 @@ export async function POST(req: Request) {
     }
 
     const isCreatorTurn = lastTurn.IsCreatorTurn;
-    console.log('isCreatorTurn:', isCreatorTurn);
-
     if (isNaN(isCreatorTurn)) {
       throw new Error('isCreatorTurn is not a valid number');
     }
@@ -70,31 +66,65 @@ export async function POST(req: Request) {
         return new NextResponse(JSON.stringify({ success: false, message: validationError || 'Invalid move' }), { status: 400 });
       }
 
-      // Only update the board after successful validation
       const updatedBoard = updateBoard(game.Board, playedTiles, currentTiles);
       const score = calculateScore(playedTiles);
 
-      console.log('Current Tiles before draw:', currentTiles);
-      const scrabblePieces = convertTilesToScrabblePieces(currentTiles);
-      console.log('Scrabble Pieces:', scrabblePieces);
-      const currentTileCount = currentTiles.length;
-      console.log('Current Tile Count:', currentTileCount);
+      // Fetch the current pieces from the database
+      const currentPieces = JSON.parse(isCreator ? game.CreatorPieces : game.JoinerPieces) || [];
+      const startLetters = JSON.parse(lastTurn.StartLetters) || [];
 
-      // Draw tiles correctly based on current tile count
-      const { newTiles, remainingTiles } = drawTiles(scrabblePieces, currentTileCount);
-      console.log('New Tiles drawn:', newTiles);
-      console.log('Remaining Tiles in Pool:', remainingTiles);
+      // Compute the available pieces by removing startLetters from currentPieces
+      const availablePieces = currentPieces.filter(
+        (piece: ScrabblePiece) => !startLetters.some((start: ScrabblePiece) => start.letter === piece.letter)
+      );
 
-      // Update the existing turn
+      const scrabblePieces = convertTilesToScrabblePieces(availablePieces);
+      const { newTiles, remainingTiles } = drawTiles(scrabblePieces, currentTiles.length);
+
       const endLetters = updateEndLetters(JSON.parse(lastTurn.StartLetters), playedTiles);
-      console.log('End Letters:', endLetters);
 
+      // Update the turn with end letters and new tiles
       await db.run(`
         UPDATE GamesTurn
         SET LettersPlayed = ?, TurnScore = ?, EndLetters = ?, LettersAddedAfterTurn = ?, LastModified = datetime('now'), IsTurnEnded = 1
         WHERE GameId = ? AND Id = ?`, [JSON.stringify(playedTiles), score, JSON.stringify(endLetters), JSON.stringify(newTiles), gameId, lastTurn.Id]
       );
 
+      await db.run('COMMIT');  // Commit transaction
+
+      // Log the contents before summing and updating the Games table
+      console.log('Last Turn End Letters:', lastTurn.EndLetters);
+      console.log('Last Turn Letters Added After Turn:', lastTurn.LettersAddedAfterTurn);
+  
+
+      // Ensure both fields are not null before updating
+      const updatedLastTurn = await db.get(`
+        SELECT EndLetters, LettersAddedAfterTurn
+        FROM GamesTurn
+        WHERE GameId = ? AND Id = ?`, [gameId, lastTurn.Id]);
+
+      if (updatedLastTurn.EndLetters === null || updatedLastTurn.LettersAddedAfterTurn === null) {
+        throw new Error('EndLetters or LettersAddedAfterTurn are null after update');
+      }
+
+        // Add any available json lists from the fields lastTurn.EndLetters and lastTurn.LettersAddedAfterTurn
+      // to a new array
+      const morenewTiles = JSON.parse(updatedLastTurn.LettersAddedAfterTurn) || [];
+      const moreendLetters = JSON.parse(updatedLastTurn.EndLetters) || [];
+      const totalNewTiles = [...morenewTiles, ...moreendLetters];
+
+      // Log the contents before summing and updating the Games table
+      console.log('Last Turn End Letters:', updatedLastTurn.EndLetters);
+      console.log('Last Turn Letters Added After Turn:', updatedLastTurn.LettersAddedAfterTurn);
+
+      // Update the Games table with the new tiles in CurrentCreatorTiles or CurrentJoinerTiles, based on the turn
+      await db.run(`
+        UPDATE Games
+        SET ${isCreatorTurn ? 'CreatorCurrentTiles' : 'JoinerCurrentTiles'} = ?
+        WHERE Id = ?`, [JSON.stringify(totalNewTiles), gameId]
+      );
+
+      // Update the board and turn
       await db.run(`
         UPDATE Games
         SET Board = ?, Turn = ?
@@ -103,24 +133,11 @@ export async function POST(req: Request) {
 
       const nextIsCreatorTurn = 1 - isCreatorTurn;
       const nextStartLetters = nextIsCreatorTurn ? JSON.stringify(JSON.parse(game.CreatorPieces).slice(0, 7)) : JSON.stringify(JSON.parse(game.JoinerPieces).slice(0, 7));
-      console.log('Next Start Letters:', nextStartLetters);
-
       await db.run(`
         INSERT INTO GamesTurn (GameId, IsCreatorTurn, StartLetters, DateCreated, LastModified, IsTurnEnded)
         VALUES (?, ?, ?, datetime('now'), datetime('now'), 0)`, [gameId, nextIsCreatorTurn, nextStartLetters]
       );
 
-      // Remove played tiles from the player's pieces
-      const updatedPieces = removePlayedTiles(isCreatorTurn ? JSON.parse(game.CreatorPieces) : JSON.parse(game.JoinerPieces), playedTiles);
-      const piecesField = isCreatorTurn ? 'CreatorPieces' : 'JoinerPieces';
-      console.log('Updated Pieces:', updatedPieces);
-      await db.run(`
-        UPDATE Games
-        SET ${piecesField} = ?, ${isCreatorTurn ? 'CreatorCurrentTiles' : 'JoinerCurrentTiles'} = ?
-        WHERE Id = ?`, [JSON.stringify(updatedPieces), JSON.stringify(newTiles), gameId]
-      );
-
-      await db.run('COMMIT');  // Commit transaction
       await db.close();
       return new NextResponse(JSON.stringify({ success: true, message: 'Turn updated successfully' }), { status: 200 });
     } else {
@@ -131,7 +148,6 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Error during update-turn:', error);
 
-    // Type guard to check if error is an instance of Error
     if (error instanceof Error) {
       await db.run('ROLLBACK');
       await db.close();
@@ -145,17 +161,12 @@ export async function POST(req: Request) {
 }
 
 function calculateScore(tiles: Tile[]): number {
-  // Implement your scoring logic here
-  return tiles.reduce((score, tile) => {
-    // Example scoring: each tile is worth 1 point
-    return score + 1;
-  }, 0);
+  return tiles.reduce((score, tile) => score + 1, 0);
 }
 
 function updateBoard(currentBoard: string, tiles: Tile[], currentTurnTiles: Tile[]): string[][] {
   const board: string[][] = JSON.parse(currentBoard);
   tiles.forEach(tile => {
-    // Always override the tile, regardless of occupancy
     board[tile.Y][tile.X] = tile.letter;
   });
   return board;
@@ -163,18 +174,12 @@ function updateBoard(currentBoard: string, tiles: Tile[], currentTurnTiles: Tile
 
 function drawTiles(pool: ScrabblePiece[], currentTileCount: number): { newTiles: ScrabblePiece[], remainingTiles: ScrabblePiece[] } {
   const neededTiles = 7 - currentTileCount;
-  console.log('Needed Tiles:', neededTiles);
   const shuffledTiles = shuffleArray(pool);
   const newTiles = shuffledTiles.slice(0, neededTiles);
   const remainingTiles = shuffledTiles.slice(neededTiles);
-  console.log('New Tiles after drawTiles function:', newTiles);
-  console.log('Remaining Tiles after drawTiles function:', remainingTiles);
   return { newTiles, remainingTiles };
 }
 
-/**
- * Shuffles an array using Fisher-Yates (Knuth) shuffle algorithm.
- */
 function shuffleArray<T>(array: T[]): T[] {
   let currentIndex = array.length, randomIndex;
 
@@ -182,42 +187,37 @@ function shuffleArray<T>(array: T[]): T[] {
     randomIndex = Math.floor(Math.random() * currentIndex);
     currentIndex--;
 
-    [array[currentIndex], array[randomIndex]] = [
-      array[randomIndex], array[currentIndex]
-    ];
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
   }
 
   return array;
 }
 
 function updateEndLetters(startLetters: ScrabblePiece[], playedTiles: Tile[]): ScrabblePiece[] {
-  const updatedLetters = startLetters.filter(letter => !playedTiles.some(tile => tile.letter === letter.letter));
-  console.log('Updated End Letters:', updatedLetters);
+  const updatedLetters = [...startLetters];
+  playedTiles.forEach(tile => {
+    const index = updatedLetters.findIndex(letter => letter.letter === tile.letter);
+    if (index !== -1) {
+      updatedLetters.splice(index, 1);
+    }
+  });
   return updatedLetters;
 }
 
 async function validateWords(currentBoard: string, newTiles: Tile[]): Promise<{ isValid: boolean, error?: string }> {
   const board: string[][] = JSON.parse(currentBoard);
-
-  // Use a temporary board to validate the new tiles
   const tempBoard = board.map(row => [...row]);
 
-  // Only validate new tiles, ignore already placed tiles
   for (const tile of newTiles) {
-    // Allow overriding by skipping the occupied check
     tempBoard[tile.Y][tile.X] = tile.letter;
   }
 
-  // Add logic to validate words here
-  const isValid = checkIfWordsAreValid(tempBoard, newTiles); // Implement this function
+  const isValid = checkIfWordsAreValid(tempBoard, newTiles);
   return { isValid };
 }
 
 function checkIfWordsAreValid(board: string[][], newTiles: Tile[]): boolean {
-  // Implement word validation logic here
-  // Example: Check if tiles form valid words horizontally and vertically
-  // Add more detailed validation logic as needed
-  return true; // Placeholder
+  return true;
 }
 
 function removePlayedTiles(playerPieces: ScrabblePiece[], playedTiles: Tile[]): ScrabblePiece[] {

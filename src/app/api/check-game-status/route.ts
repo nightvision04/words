@@ -18,7 +18,6 @@ export async function POST(req: Request) {
         await db.close();
 
         if (game && game.IsStarted) {
-            console.log('Game found:', game);
             return new NextResponse(JSON.stringify({ success: true, game }), { status: 200 });
         } else {
             console.log('No game found or waiting for player');
